@@ -16,9 +16,9 @@
 
 #include "opstatus.h"
 #include "vspa_iqstream.h"
+#include "phytimer.h"
 
-#define PHY_TMR_DMA_CHAN 0
-#define PHY_TMR_DMA_CHAN_MASK (1 << PHY_TMR_DMA_CHAN)
+#define DAC_TIMER_ID 11
 
 #define DMEM_ALIGNMENT_ATTR aligned(64)
 
@@ -47,6 +47,8 @@ struct PipeStats tx_stats;
 #define TX_MAX_UPSAMPLE_TAPS 64
 cfixed16_t int_history[TX_MAX_UPSAMPLE_TAPS] __attribute__((aligned(64), section(".vcpu_dmem"))) = { 0 };
 uint16_t int_ratio_pow2[TX_MAX_LANE_COUNT] = { 0 };
+
+static void dac_underrun_recovery(uint16_t lane);
 
 // Interpolation function prototypes
 extern void X2_interp_tap32_filter(__fx16 *output, __fx16 *input, unsigned int num_samples, __fx16 *history, float *filter_taps);
@@ -181,6 +183,11 @@ void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr) {
     tcd->la9310_mem_address += xfer_size;
     tcd->size -= xfer_size;
 
+    const uint32_t ts_lsb = tcd->timestamp_lsb + DDR_XFER_SAMPLE_COUNT;
+    if (ts_lsb < tcd->timestamp_lsb)
+        ++tcd->timestamp_msb;
+    tcd->timestamp_lsb = ts_lsb;
+
     tx_meta_t *const meta = &ddr->meta[ddr->count_dmac_enque & 0x1];
     meta->flags = tcd->flags;
 
@@ -249,13 +256,16 @@ static inline void interpol(cfixed16_t *dest, cfixed16_t *src, cfixed16_t *histo
 }
 
 static inline void tx_pipeline_work(uint16_t lane) {
-    if (txddr[lane].ready_buffer_count == 0)
-        return;
-
-    const uint16_t dma_mask = (1 << dac[lane].dma_channel);
-    if (!dmac_is_available(dma_mask)) {
+    if (!dmac_is_available(1 << dac[lane].dma_channel)) {
         return; // no free buffer. redundant check, should not happen
     }
+
+    if (check_dac_had_issues()) {
+        dac_underrun_recovery(lane);
+    }
+
+    if (txddr[lane].ready_buffer_count == 0)
+        return;
 
     cfixed16_t *src = txddr[lane].ready_buffer + txddr[lane].ready_buffer_offset;
     cfixed16_t *dest = dac[lane].next_buffer;
@@ -273,15 +283,11 @@ static inline void tx_pipeline_work(uint16_t lane) {
     // mark whole or part of available ddr data as consumed
     bool dac_end = consume_ddr(lane, &txddr[lane], src_count) && (meta->flags & PKT_END);
 
-    check_dac_had_issues();
-
     dac_enque(dac, dac_end);
 }
 
 void dac_dma_complete(uint16_t lane) {
     TRACE_START_DURATION(t1);
-
-    check_dac_had_issues();
 
     ++tx_stats.afe_compl;
 
@@ -357,8 +363,8 @@ static void inline tx_axiq_fifo_reset(uint16_t lane) {
     // ensure abort has ended before issuing new dma commands
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
 
-    const uint32_t tx_dma_allowed = gpird(1, 1 << 16); // Phytimer trigger value
-    if (tx_dma_allowed) // need dma allowed trigger for proper reset
+    // const uint32_t tx_dma_allowed = gpird(1, 1 << 16); // Phytimer trigger value
+    // if (tx_dma_allowed) // need dma allowed trigger for proper reset
     {
         stream_write_ptr_rst_trig(lane); // exit flush mode, tx_dma_allowed trigger must be still enabled at this point
 
@@ -409,4 +415,32 @@ void tx_lane_abort(uint16_t lane) {
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
     dmac_clear_complete(dma_mask);
     dmac_clear_event(dma_mask);
+}
+
+static void dac_underrun_recovery(uint16_t lane) {
+    tx_ddr_pipeline_t *const ddr = &txddr[lane];
+    // aborts and resets DAC transfers
+    uint32_t trig_dma =
+        timer_trig_immediate_async(DAC_TIMER_ID, ePhyTimerComparatorOut1); // trigger must be 1 for FIFO ptr rst to work
+    WAIT_FOR(dmac_is_complete(trig_dma), VSPA_DEFAULT_TIMEOUT);
+    dmac_clear_complete(trig_dma);
+    tx_axiq_fifo_reset(lane);
+    trig_dma = timer_trig_immediate_async(DAC_TIMER_ID, ePhyTimerComparatorOut0);
+    WAIT_FOR(dmac_is_complete(trig_dma), VSPA_DEFAULT_TIMEOUT);
+    dmac_clear_complete(trig_dma);
+
+    TxAXIQ(true);
+    axiq_fifo_tx_cr(AXIQ_BANK_0, (enum axiq_fifo_e)dac[lane].axi_fifo_index, AXIQ_CR_CLRERR, AXIQ_CR_CLRERR);
+    axiq_fifo_tx_cr(AXIQ_BANK_0, (enum axiq_fifo_e)dac[lane].axi_fifo_index, AXIQ_CR_CLRERR, 0);
+
+    // fast forward sufficiently to schedule next phytimer start
+    while (!tcd_fifo_isempty(&ddr->dma_hif.tcd_table)) {
+        ++tx_stats.afe_err;
+        const dma_tcd_t *tcd = tcd_fifo_front(&ddr->dma_hif.tcd_table);
+        // drop till next start
+        if (tcd->flags & PKT_START)
+            break;
+
+        tcd_fifo_pop(&ddr->dma_hif.tcd_table);
+    }
 }
