@@ -43,6 +43,8 @@ typedef enum {
     MBOX_OPC_GET_FEATURES_MAP,
     MBOX_OPC_TX_DMA_SUBMIT,
     MBOX_OPC_RX_DMA_SUBMIT,
+    MBOX_OPC_RX_FFT,
+    MBOX_OPC_ADC_CAPTURE,
 } mbox_opc_e;
 
 #endif // IQPLAYER_COMMANDS_H

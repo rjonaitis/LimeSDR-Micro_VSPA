@@ -7,6 +7,7 @@
 #include "iqplayer_commands.h"
 #include "vcpu.h"
 #include "vspa_dma_hif.h"
+#include "tone_generator.h"
 
 #include <stdint.h>
 
@@ -38,13 +39,20 @@ typedef struct DAC_lane {
     uint16_t dma_channel;
 } dac_pipeline_t;
 
+typedef struct TxPipeline {
+    bool generate_tone;
+} tx_pipeline_t;
+
 #define TX_MAX_LANE_COUNT 1
 
 extern tx_ddr_pipeline_t txddr[TX_MAX_LANE_COUNT];
+extern tone_state_t tx_tone_state[TX_MAX_LANE_COUNT];
 
 void transmitter_init(void);
 void tx_lane_setup(uint16_t lane, uint16_t channel);
 int tx_set_oversampling(uint16_t lane, uint16_t oversample_pow2);
+
+void tx_lane_ddr_enable(uint16_t lane, bool enable);
 
 void tx_lane_prime(uint16_t lane);
 void tx_lane_abort(uint16_t lane);
@@ -52,5 +60,7 @@ void tx_lane_abort(uint16_t lane);
 void dac_dma_complete(uint16_t lane);
 void tx_ddr_complete(uint16_t lane);
 void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr);
+
+int tx_tone_enable(uint16_t lane, bool enable);
 
 #endif /* IQMOS_RX_H_ */

@@ -16,6 +16,7 @@
 
 #include "opstatus.h"
 #include "vspa_iqstream.h"
+#include "phytimer.h"
 
 #define PHY_TMR_DMA_CHAN 0
 #define PHY_TMR_DMA_CHAN_MASK (1 << PHY_TMR_DMA_CHAN)
@@ -34,11 +35,12 @@
 #define DDR_XFER_SIZE_BYTES (DDR_XFER_SAMPLE_COUNT * 4)
 
 cfixed16_t dac_buffer[TX_MAX_LANE_COUNT][MAX_DMA_ENQ * DAC_XFER_SAMPLE_COUNT]
-    __attribute__((DMEM_ALIGNMENT_ATTR, section(".vcpu_dmem")));
+    __attribute__((DMEM_ALIGNMENT_ATTR, section(".ippu_dmem")));
 cfixed16_t ddr_read_buffer[TX_MAX_LANE_COUNT][MAX_DMA_ENQ * DDR_XFER_SAMPLE_COUNT]
-    __attribute__((DMEM_ALIGNMENT_ATTR, section(".vcpu_dmem")));
+    __attribute__((DMEM_ALIGNMENT_ATTR, section(".ippu_dmem")));
 
-tone_state_t tx_generator[TX_MAX_LANE_COUNT];
+tx_pipeline_t txpipe[TX_MAX_LANE_COUNT] = { { false } };
+tone_state_t tx_tone_state[TX_MAX_LANE_COUNT];
 dac_pipeline_t dac[TX_MAX_LANE_COUNT];
 
 tx_ddr_pipeline_t txddr[TX_MAX_LANE_COUNT];
@@ -142,9 +144,9 @@ void tx_lane_setup(uint16_t lane, uint16_t channel) {
     dac[lane].dma_channel = TX_DAC_WR_DMA_CHANNEL + channel;
     tx_dac_reset(&dac[lane], dac_buffer[lane]);
 
-    tx_generator[lane].amplitude = 0.9;
-    tx_generator[lane].phase = 0;
-    tx_generator[lane].freq_bin = 8192;
+    tx_tone_state[lane].amplitude = 0.9;
+    tx_tone_state[lane].phase = 0;
+    tx_tone_state[lane].freq_bin = 8192;
 
     txddr[lane].dma_channel = DDR_RD_DMA_CHANNEL_1; // + lane;
     tx_ddr_reset(&txddr[lane], ddr_read_buffer[lane]);
@@ -153,7 +155,7 @@ void tx_lane_setup(uint16_t lane, uint16_t channel) {
 }
 
 void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr) {
-    const uint16_t buffers_in_use = ddr->count_dmac_enque - ddr->count_dmac_complete;
+    const uint16_t buffers_in_use = ddr->count_dmac_enque - ddr->count_dmac_complete + ddr->ready_buffer_count;
     if (buffers_in_use >= MAX_DMA_ENQ) {
         return; // skip, all ddr buffers are in use
     }
@@ -200,16 +202,14 @@ void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr) {
     TRACE_DURATION(T_DDR_WR, DEFAULT_THREAD_ID, t1);
 }
 
-static inline bool consume_ddr(uint16_t lane, tx_ddr_pipeline_t *ddr, uint16_t samplesCount) {
+static inline bool consume_ddr(tx_ddr_pipeline_t *ddr, uint16_t samplesCount) {
     ddr->ready_buffer_offset += samplesCount;
     if (ddr->ready_buffer_offset < DDR_XFER_SAMPLE_COUNT)
         return false;
 
     --ddr->ready_buffer_count;
     ddr->ready_buffer_offset = 0;
-
-    ++ddr->count_dmac_complete;
-    ddr->ready_buffer = ddr->base_buffer + (ddr->count_dmac_complete & 0x1) * DDR_XFER_SAMPLE_COUNT;
+    ddr->ready_buffer = ddr->base_buffer + ((ddr->count_dmac_complete - ddr->ready_buffer_count) & 0x1) * DDR_XFER_SAMPLE_COUNT;
     return true;
 }
 
@@ -236,12 +236,10 @@ static inline void interpol(cfixed16_t *dest, cfixed16_t *src, cfixed16_t *histo
     case 1:
         X2_interp_tap32_filter((__fx16 *)dest, (__fx16 *)src, src_count, (__fx16 *)int_history,
                                (float *)tx_filter_taps_upsampling_x2);
-        src = dac[lane].next_buffer;
         break;
     case 2:
         X4_interp_tap64_filter((__fx16 *)dest, (__fx16 *)src, src_count, (__fx16 *)int_history,
                                (float *)tx_filter_taps_upsampling_x4);
-        src = dac[lane].next_buffer;
         break;
     default:
         break;
@@ -249,29 +247,44 @@ static inline void interpol(cfixed16_t *dest, cfixed16_t *src, cfixed16_t *histo
 }
 
 static inline void tx_pipeline_work(uint16_t lane) {
-    if (txddr[lane].ready_buffer_count == 0)
-        return;
-
     const uint16_t dma_mask = (1 << dac[lane].dma_channel);
     if (!dmac_is_available(dma_mask)) {
         return; // no free buffer. redundant check, should not happen
     }
 
-    cfixed16_t *src = txddr[lane].ready_buffer + txddr[lane].ready_buffer_offset;
-    cfixed16_t *dest = dac[lane].next_buffer;
+    tx_ddr_pipeline_t *const ddr = &txddr[lane];
+    cfixed16_t *const src = ddr->ready_buffer + ddr->ready_buffer_offset;
+    if (txpipe[lane].generate_tone) {
+        // overwrite ddr buffer with generated signal
+        if (ddr->ready_buffer_offset == 0 && ddr->ready_buffer_count < 2) {
+            gen_nco_single_tone(src, DDR_XFER_SAMPLE_COUNT, &tx_tone_state[lane]);
+            ++ddr->ready_buffer_count;
+        }
+    } else {
+        if (ddr->ready_buffer_count == 0)
+            return;
+    }
 
-    const uint16_t src_count = DAC_XFER_SAMPLE_COUNT >> int_ratio_pow2[lane];
+    cfixed16_t *const dest = dac[lane].next_buffer;
+
+    const uint16_t work_samples_count = DAC_XFER_SAMPLE_COUNT >> int_ratio_pow2[lane];
     if (int_ratio_pow2[lane]) {
-        interpol(dest, src, int_history, src_count);
+        interpol(dest, src, int_history, work_samples_count);
         // qec inplace
         tx_qec_correction(dest, dest, DAC_XFER_SAMPLE_COUNT);
     } else {
         tx_qec_correction(dest, src, DAC_XFER_SAMPLE_COUNT);
     }
 
-    tx_meta_t *const meta = &txddr[lane].meta[txddr[lane].count_dmac_complete & 0x1];
-    // mark whole or part of available ddr data as consumed
-    bool dac_end = consume_ddr(lane, &txddr[lane], src_count) && (meta->flags & PKT_END);
+    bool dac_end;
+    if (txpipe[lane].generate_tone) {
+        dac_end = false;
+        consume_ddr(ddr, work_samples_count);
+    } else {
+        tx_meta_t *const meta = &ddr->meta[(ddr->count_dmac_complete - ddr->ready_buffer_count) & 0x1];
+        // mark whole or part of available ddr data as consumed
+        dac_end = consume_ddr(ddr, work_samples_count) && (meta->flags & PKT_END);
+    }
 
     check_dac_had_issues();
 
@@ -290,11 +303,16 @@ void dac_dma_complete(uint16_t lane) {
     dmac_clear_event(dma_mask);
 
     // dac xfer has finished, freed up buffer for work output
-    tx_pipeline_work(lane);
-
-    // reenque ddr
-    if (!tcd_fifo_isempty(&txddr[lane].dma_hif.tcd_table))
-        tx_lane_try_ddr_enqueue(&txddr[lane]);
+    if (txpipe[lane].generate_tone) {
+        gen_nco_single_tone(dac[lane].next_buffer, DAC_XFER_SAMPLE_COUNT, &tx_tone_state[lane]);
+        tx_qec_correction(dac[lane].next_buffer, dac[lane].next_buffer, DAC_XFER_SAMPLE_COUNT);
+        dac_enque(&dac[lane], false);
+    } else {
+        tx_pipeline_work(lane);
+        // reenque ddr
+        if (!tcd_fifo_isempty(&txddr[lane].dma_hif.tcd_table))
+            tx_lane_try_ddr_enqueue(&txddr[lane]);
+    }
 
     TRACE_DURATION(T_AXIQ_COMPLETE, DEFAULT_THREAD_ID, t1);
 }
@@ -306,8 +324,7 @@ void tx_ddr_complete(uint16_t lane) {
     dmac_clear_complete(dma_mask);
     dmac_clear_event(dma_mask);
 
-    const uint16_t buf_index = ddr->count_dmac_complete + ddr->ready_buffer_count;
-    tx_meta_t *const meta = &ddr->meta[buf_index & 0x1];
+    tx_meta_t *const meta = &ddr->meta[ddr->count_dmac_complete & 0x1];
 
     if (meta->flags & PKT_DMA_TCD_END) {
         ++ddr->dma_hif.tcd_table.done;
@@ -315,6 +332,7 @@ void tx_ddr_complete(uint16_t lane) {
     }
 
     ++tx_stats.dfe_compl;
+    ++ddr->count_dmac_complete;
     ++ddr->ready_buffer_count;
 
     tx_pipeline_work(lane);
@@ -387,11 +405,19 @@ void tx_lane_prime(uint16_t lane) {
     axiq_fifo_tx_cr(AXIQ_BANK_0, (enum axiq_fifo_e)dac->axi_fifo_index, AXIQ_CR_CLRERR, AXIQ_CR_CLRERR);
     axiq_fifo_tx_cr(AXIQ_BANK_0, (enum axiq_fifo_e)dac->axi_fifo_index, AXIQ_CR_CLRERR, 0);
 
+    if (txpipe[lane].generate_tone)
+        return;
+
     // if data available enque two buffers
     if (!tcd_fifo_isempty(&ddr->dma_hif.tcd_table)) {
         tx_lane_try_ddr_enqueue(ddr);
         tx_lane_try_ddr_enqueue(ddr);
     }
+}
+
+void tx_lane_ddr_enable(uint16_t lane, bool enable) {
+    if (enable)
+        tx_lane_prime(lane);
 }
 
 // Aborts any pending transfers and resets the pipeline's AXIQ FIFO
@@ -401,6 +427,8 @@ void tx_lane_abort(uint16_t lane) {
     // when DMA aborted, pending transactions won't trigger complete/go/ptr_rst
     dmac_abort(dma_mask);
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
+    dmac_clear_complete(dma_mask);
+    dmac_clear_event(dma_mask);
 
     if (!tx_axiq_is_enabled())
         return; // axiq is already disabled, do nothing
@@ -409,4 +437,27 @@ void tx_lane_abort(uint16_t lane) {
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
     dmac_clear_complete(dma_mask);
     dmac_clear_event(dma_mask);
+}
+
+int tx_tone_enable(uint16_t lane, bool enable) {
+    if (txpipe[lane].generate_tone == enable)
+        return 0;
+    txpipe[lane].generate_tone = enable;
+
+    if (enable) {
+        // Enable trigger for proper AXIQ reset
+        timer_trig_immediate(11, ePhyTimerComparatorOut1);
+
+        tx_lane_prime(lane);
+
+        timer_trig_immediate(11, ePhyTimerComparatorOut0);
+        // initial work twice to produce two initial buffers
+        tx_pipeline_work(lane);
+        tx_pipeline_work(lane);
+        timer_trig_immediate(11, ePhyTimerComparatorOut1);
+    } else {
+        tx_lane_abort(lane);
+        timer_trig_immediate(11, ePhyTimerComparatorOut0);
+    }
+    return 0;
 }

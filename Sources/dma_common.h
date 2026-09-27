@@ -48,6 +48,8 @@
 
 #define DMEM_LINE_SIZE_BYTES 128 // 1024 bits
 
+#define VSPA_DEFAULT_TIMEOUT 2000
+
 // VSPA addresing is in 16bit granularity
 #define VSPA_HALF_WORDS(x) (2 * (uint32_t)x)
 

@@ -27,5 +27,6 @@ const vspa_feature_t features_map[] __attribute__((section(".mmap_entry"))) = {
     { VSPA_MMAP_TXDMA_LANE0, (uint32_t)(&(txddr[0].dma_hif)) },
     { VSPA_MMAP_STATS, (uint32_t)&rx_stats[0] },
     { VSPA_MMAP_STATS2, (uint32_t)&tx_stats },
+    { VSPA_MMAP_TX_TONE_LANE0, (uint32_t)&tx_tone_state[0] },
     { VSPA_MMAP_NONE, 0 }
 };

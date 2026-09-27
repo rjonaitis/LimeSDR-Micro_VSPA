@@ -1,0 +1,384 @@
+# SPDX-License-Identifier: (BSD-3-Clause OR GPL-2.0)
+# Copyright 2017 - 2025   NXP Semiconductors
+
+   .section   .text
+
+// =============================================================================
+//! @file           fftDIT512_hfl.sx
+//! @brief          512 pt FFT and IFFT functions using DIT   
+//! @author         NXP Semiconductors
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Subroutine name: fftDIT512_hfl/ifftDIT512_hfl
+//
+// Subroutines called by this subroutine:
+//    NONE
+//
+// ASM implementation description:
+//    Data for DIT butterflies is read into VRA. All stages are computed within the VRA 
+//      and final output is shipped off to memory.  
+//
+// Notes:
+//    NONE
+//
+// -----------------------------------------------------------------------------
+   .global  _fftDIT512_hfl
+   .type   _fftDIT512_hfl, @function
+_fftDIT512_hfl:
+#ifndef LIB_FFT_STUB
+	
+	jmp core_fftDIT512_hfl;
+   	set.creg 13, 1;
+   	set.nco radix2, 256, 8388608;
+
+#endif // LIB_FFT_STUB
+
+   	rts;
+   	nop;
+   	nop;
+
+   .size   _fftDIT512_hfl, .-_fftDIT512_hfl
+
+//===================================================================================
+   .global  _ifftDIT512_hfl
+   .type   _ifftDIT512_hfl, @function
+_ifftDIT512_hfl:
+#ifndef LIB_FFT_STUB
+
+	jmp core_fftDIT512_hfl;
+	set.creg 13, 1;
+   	.quad ((0x0<<60) | (0x04<<54) | (0x2<<52) | (0x100<<36) | (0x1<<34) | (0x800000<<2))
+
+#endif // LIB_FFT_STUB
+	fnop;
+   	rts;
+   	nop;
+   	nop;
+
+   .size   _ifftDIT512_hfl, .-_ifftDIT512_hfl
+
+
+// ***************************** CORE FUNCTION *****************************
+   .type   core_fftDIT512_hfl, @function
+core_fftDIT512_hfl:
+	mvB a4, a1;
+	clr.VRA;
+   	ld.laddr [a0]+1; 																	setB.VRAptr rS0, 16;			
+   	ld.laddr [a0]+1;																	set.VRAincr rS0, 32;
+   	ld.laddr [a0]+1;																	set.VRAincr rS2, 32;
+   						   	ld.h2l R0;													set.creg  15, 0xF;
+   	ld.laddr [a0]+1;		ld.l2h_h2l R0;												set.prec half, single, half, single, half_fixed;
+   	ld.laddr [a0]+1;		ld.l2h R1;  	rd S0; nco; rd S2;							set.Smode S0fft1, S2fft1;											
+   							ld.h2l R2;		rd S0; nco; rd S2;							set.VRArange1 rS2, 0, 224;								
+   							ld.l2h_h2l R2;	rd S0; nco; rd S2;	cmad.sau;				set.VRArange1 rS0, 16, 240;
+   							ld.l2h R3;		rd S0; nco; rd S2;	cmad.sau;				setB.VRAptr rV, 256;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;				set.VRAincr rV, 32;	
+   	ld.laddr [a0]+1;   						rd S0; nco; rd S2;	cmad.sau;				set.VRAincr rSt, 1;
+   							ld.h2l R0;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	set.VRArange1 rV, 256, 480;
+   	ld.laddr [a0]+1;		ld.l2h_h2l R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	setB.VRAptr rSt, 4;
+	ld.laddr [a0]+1;		ld.l2h R1;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+   							ld.h2l R2;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	set.VRArange1 rSt, 4, 7;
+	st.laddr [a1]+1;		ld.l2h_h2l R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.l2h R3;		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.h2l R0; 		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+   	ld.laddr [a0]+1;		ld.l2h_h2l R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+	ld.laddr [a0]+1;		ld.l2h R1;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+   	st.laddr [a1]+1;		ld.h2l R2;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+	st.laddr [a1]+1;		ld.l2h_h2l R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.l2h R3;		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.h2l R0; 		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+   	ld.laddr [a0]+1;		ld.l2h_h2l R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+	ld.laddr [a0]+1;		ld.l2h R1;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	mvB a0, a4;
+   	st.laddr [a1]+1;		ld.h2l R2;		rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+	st.laddr [a1]+1;		ld.l2h_h2l R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.l2h R3;		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;	mv nco_k, 128;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	set.prec half_fixed, single, half_fixed, single, half_fixed;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;	set.Smode S0fft2, S2fft2;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft1;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft1;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	st.laddr [a1]-15;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	ld.laddr [a0]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;   	   	
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft2;	mv nco_k, 64;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;	set.Smode S0fft3, S2fft3;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft2;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	st.laddr [a1]-15;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	ld.laddr [a0]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;   	   	
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft3;	mv nco_k, 32;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;	set.Smode S0fftn, S2fftn;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft3;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	st.laddr [a1]-15;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	ld.laddr [a0]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+	ld.laddr [a0]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;   	   	
+	st.laddr [a1]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	st.laddr [a1]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fft4;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	wr.fft4;	mv nco_k, 16;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft4;	set.VRAincr rS0, 16;
+	setA.VRAptr rS0, 32;	ld.normal R1;						cmad.sau; 	wr.fft4;	set.VRAincr rS2, 16;
+   																cmad.sau; 	wr.fft4;	set.VRArange1 rS2, 0, 16;
+   																			wr.fft4;	set.VRArange2 rS2, 64, 80;
+   																			wr.fft4;	set.VRArange1 rS0, 32, 48;
+   																			wr.fft4;	set.VRArange2 rS0, 96, 112;
+	ld.laddr [a0]+1;						rd S0; nco; rd S2;				wr.fft4;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;
+	ld.laddr [a0]+1;				   		rd S0; nco; rd S2;	cmad.sau;	
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]-15;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]-15;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+	ld.laddr [a0]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;	mv nco_k, 8;
+   	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;
+   	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau; 	wr.fft5;	setB.VRAptr rS0, 128;		
+							ld.normal R2;						cmad.sau; 	wr.fft5; 	set.VRArange1 rS2, 0, 112;
+   																cmad.sau; 	wr.fft5;	set.VRArange2 rS2, 0, 0;										
+   																		 	wr.fft5;  	set.VRArange1 rS0, 128, 240;
+   																		 	wr.fft5;	set.VRArange2 rS0, 0, 0;
+   																			wr.fft5;	set.creg 15, 0x8;
+   	ld.laddr [a0]+1;														wr.fft5;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;
+											rd S0; nco; rd S2;							set.VRArange1 rV, 256, 304;
+							ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;				set.VRArange2 rV, 384, 432;
+	ld.laddr [a0]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;				set.VRAincr rV, 16;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+1;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+1;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-15;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	mv nco_k, 4;
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;		
+	ld.laddr [a0]+2;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+2;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-15;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	mv nco_k, 2;
+	st.laddr [a1]-1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-1;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]+1;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+2;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-15;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-3;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-3;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-3;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+4;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-15;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+1;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	st.laddr [a1]-3;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	mv nco_k, 1;
+	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	st.laddr [a1]-3;		ld.normal R0;						cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;		ld.normal R2;						cmad.sau;	wr.fftn;
+	ld.laddr [a0]-7;						rd S0; nco; rd S2;				wr.fftn;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;				wr.fftn;
+	st.laddr [a1]-3;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+	ld.laddr [a0]+8;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;
+	st.laddr [a1]+4;						rd S0; nco; rd S2;	cmad.sau;				
+	st.laddr [a1]-15;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+											rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+							ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-7;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-7;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	ld.laddr [a0]+8;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	ld.laddr [a0]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-7;		ld.normal R0;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+	ld.laddr [a0]+8;		ld.normal R2;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   	ld.laddr [a0]-15;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-7;		ld.normal R1;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;		ld.normal R3;	rd S0; nco; rd S2;	cmad.sau;	wr.fftn;	
+   	st.laddr [a1]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+											rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+	st.laddr [a1]-7;						rd S0; nco; rd S2;	cmad.sau;	wr.fftn;
+   																cmad.sau;	wr.fftn;
+																cmad.sau;	wr.fftn;
+	st.laddr [a1]+8;														wr.fftn;
+	st.laddr [a1]-7;														wr.fftn;
+																			wr.fftn;
+																			wr.fftn;	rts;
+	st.laddr [a1]+8;																	set.creg  15, 0xA;
+	st.laddr [a1]-15;																	set.creg 13, 0;
+   	
+   .size   core_fftDIT512_hfl, .-core_fftDIT512_hfl
+// end
+//

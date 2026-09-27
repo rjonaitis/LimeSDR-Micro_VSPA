@@ -17,7 +17,7 @@
 #include <stddef.h>
 
 // -----------------------------------------------------------------------------
-//! @defgroup		GROUP_FFT FFT Library
+//! @defgroup       GROUP_FFT FFT Library
 //! @brief          FFT function library
 //!
 //! This library contains function prototypes for radix 2 FFTs
@@ -106,13 +106,13 @@
 //! @brief           64 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -131,13 +131,13 @@ extern void fftDIF64_hfx_sfl(vspa_complex_fixed16 const *pIn, // Input buffer po
 //! @brief           64 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -156,13 +156,13 @@ extern void ifftDIF64_hfx_sfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -181,13 +181,13 @@ extern void fftDIF128_hfx_sfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -207,13 +207,13 @@ ifftDIF128_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer fo
 //! @brief           256 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -232,13 +232,13 @@ extern void fftDIF256_hfx_sfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           256 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -258,13 +258,13 @@ ifftDIF256_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer fo
 //! @brief           512 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -283,13 +283,13 @@ extern void fftDIF512_hfx_sfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           512 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -309,13 +309,13 @@ ifftDIF512_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer fo
 //! @brief           1024 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -335,13 +335,13 @@ fftDIF1024_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer fo
 //! @brief           1024 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -361,13 +361,13 @@ ifftDIF1024_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer f
 //! @brief           2048 pt SP FFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -387,13 +387,13 @@ fftDIF2048_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer fo
 //! @brief           2048 pt SP IFFT using decimation in frequency approach for 16 bit fixed point input data, 32 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -413,13 +413,13 @@ ifftDIF2048_hfx_sfl(vspa_complex_fixed16 const *pIn,   // Input buffer pointer f
 //! @brief           64 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = (1/N)*fft(x)
@@ -438,13 +438,13 @@ extern void fftDIF64_hfx_hfx(vspa_complex_fixed16 const *pIn,   // Input buffer 
 //! @brief           64 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = ifft(x)
@@ -463,13 +463,13 @@ extern void ifftDIF64_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = (1/N)*fft(x)
@@ -488,13 +488,13 @@ extern void fftDIF128_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = ifft(x)
@@ -513,13 +513,13 @@ extern void ifftDIF128_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           256 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = (1/N)*fft(x)
@@ -538,13 +538,13 @@ extern void fftDIF256_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           256 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = ifft(x)
@@ -563,13 +563,13 @@ extern void ifftDIF256_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           512 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = (1/N)*fft(x)
@@ -588,13 +588,13 @@ extern void fftDIF512_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           512 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = ifft(x)
@@ -613,13 +613,13 @@ extern void ifftDIF512_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           1024 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -638,13 +638,13 @@ extern void fftDIF1024_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           1024 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -663,13 +663,13 @@ extern void ifftDIF1024_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer
 //! @brief           2048 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -688,13 +688,13 @@ extern void fftDIF2048_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           2048 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit fixed point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -713,13 +713,13 @@ extern void ifftDIF2048_hfx_hfx(vspa_complex_fixed16 const *pIn, // Input buffer
 //! @brief           64 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -738,13 +738,13 @@ extern void fftDIF64_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer po
 //! @brief           64 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 64 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -763,13 +763,13 @@ extern void ifftDIF64_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -788,13 +788,13 @@ extern void fftDIF128_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           128 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 128 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -813,13 +813,13 @@ extern void ifftDIF128_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           256 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -838,13 +838,13 @@ extern void fftDIF256_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           256 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 256 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -863,13 +863,13 @@ extern void ifftDIF256_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           512 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -888,13 +888,13 @@ extern void fftDIF512_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer p
 //! @brief           512 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 512 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -913,13 +913,13 @@ extern void ifftDIF512_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           1024 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -938,13 +938,13 @@ extern void fftDIF1024_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           1024 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating
 //! point output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 1024 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)
@@ -963,13 +963,13 @@ extern void ifftDIF1024_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer
 //! @brief           2048 pt HFX FFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating point
 //! output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt FFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = fft(x)
@@ -988,13 +988,13 @@ extern void fftDIF2048_hfx_hfl(vspa_complex_fixed16 const *pIn, // Input buffer 
 //! @brief           2048 pt HFX IFFT using decimation in frequency approach for 16 bit fixed point input data, 16 bit floating
 //! point output data
 //!
-//! @param[in]       pIn   		Input buffer address
-//! @param[out]      pOut  		Output buffer address
-//! @param[in]       pBuff 		Base of circular input buffer
+//! @param[in]       pIn        Input buffer address
+//! @param[out]      pOut       Output buffer address
+//! @param[in]       pBuff      Base of circular input buffer
 //! @param[in]       cbuffSize  Size of circular buffer in half-word units
 //! @return          Void.
 //! @cycle
-//! @stack         	 0
+//! @stack           0
 //!
 //! This function calculates 2048 pt IFFT using decimation in frequency (DIF approach)
 //! Equivalent MATLAB command: y = N*ifft(x)

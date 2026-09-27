@@ -1,16 +1,19 @@
 add_library(vspa-kernel
 	src/ddc2x4x.sx
 	src/fftDIF512_hfx_hfx.sx
+	src/fftDIF512_hfx_sfl.sx
 	src/txiqcomp.sx
 	src/txiqcomp_x32chf_5t.sx
 	src/X2_interp_tap32_filter.sx
 	src/X4_interp_tap64_filter.sx
+	src/fftDIT512_hfl.sx
 )
 
 # CMake does not recognize .sx as assembly, only .s
 set_source_files_properties(
 	src/ddc2x4x.sx
 	src/fftDIF512_hfx_hfx.sx
+	src/fftDIF512_hfx_sfl.sx
 	src/txiqcomp.sx
 	src/txiqcomp_x32chf_5t.sx
 	src/X2_interp_tap32_filter.sx

@@ -1,8 +1,6 @@
 #ifndef LIME_VSPA_IQSTREAM_H
 #define LIME_VSPA_IQSTREAM_H
 
-#define VSPA_DEFAULT_TIMEOUT 2000
-
 typedef struct VSPA_State {
     uint32_t errno; // general error indicator is something wrong happened
     uint32_t go_count;

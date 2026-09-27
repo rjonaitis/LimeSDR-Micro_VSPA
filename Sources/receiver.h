@@ -42,7 +42,7 @@ typedef struct ADC_lane {
     uint16_t dma_channel;
 } adc_pipeline_t;
 
-#define RX_MAX_LANE_COUNT 2
+#define RX_MAX_LANE_COUNT 1
 
 extern rx_ddr_pipeline_t rxddr[RX_MAX_LANE_COUNT];
 extern adc_pipeline_t adc[RX_MAX_LANE_COUNT];
@@ -56,5 +56,8 @@ void rx_lane_stop(uint16_t lane);
 
 void adc_dma_complete(uint16_t lane);
 void ddr_dma_complete(uint16_t lane);
+
+vspa_complex_float32 *rx_fft(uint16_t channel);
+cfixed16_t *capture_adc(uint16_t channel);
 
 #endif /* IQMOS_RX_H_ */

@@ -149,11 +149,35 @@ uint64_t HandleCommand(uint64_t msg64) {
         return (MAKEDWORD(0, tx_set_oversampling(lane, ovr_pow2)));
         break;
     }
-    case MBOX_OPC_SINGLE_TONE_TX:
-        // TxTone_control(msg64);
-        return (MAKEDWORD(0, 0x1));
+    case MBOX_OPC_SINGLE_TONE_TX: {
+        const uint8_t lane = msg_lsb & 0xFF;
+        const bool enable = msg_lsb & (1 << 16);
+        return (MAKEDWORD(0, tx_tone_enable(lane, enable)));
         break;
+    }
+    case MBOX_OPC_IQ_CORR: {
+        // QEC param update
+        uint32_t iq_channel_id = ((msg_msb & 0x00030000) >> 16); /* bit49-48 */
+        uint32_t iq_dir_tx = ((msg_msb & 0x00200000) >> 21); /* bit 53 */
+        uint32_t iq_rst = ((msg_msb & 0x00100000) >> 20); /* bit 52 */
+        uint32_t iq_idx = msg_msb & 0x0000FFFF; /* bit 47-32*/
+        uint32_t iq_val = msg_lsb; /* bit 31-0 */
 
+        if (iq_dir_tx) {
+#ifdef TXIQCOMP2
+            rf_update_iq_comp_params2(&iq_comp_params2_tx, iq_rst, iq_idx, iq_val);
+#else
+            rf_update_iq_comp_params(&txiqcompcfg_struct, iq_rst, iq_idx, iq_val);
+#endif
+        } else {
+#ifdef TXIQCOMP2
+            rf_update_iq_comp_params2(&iq_comp_params2_rx, iq_rst, iq_idx, iq_val);
+#else
+            rf_update_iq_comp_params(&rxiqcompcfg_struct, iq_rst, iq_idx, iq_val);
+#endif
+        }
+        return MAKEDWORD(0, 0);
+    }
     case MBOX_OPC_DONE_SWRESET:
         SwReset();
         break;
@@ -161,13 +185,23 @@ uint64_t HandleCommand(uint64_t msg64) {
     case MBOX_OPC_GET_FEATURES_MAP: {
         return (MAKEDWORD(VSPA_HALF_WORDS(features_map), lime_Result_Success));
     }
+    case MBOX_OPC_RX_FFT: {
+        const uint16_t channel = msg_lsb & 0xFF;
+        const uint32_t output_address = (uint32_t)rx_fft(channel);
+        return (MAKEDWORD(VSPA_HALF_WORDS(output_address), lime_Result_Success));
+    }
+    case MBOX_OPC_ADC_CAPTURE: {
+        const uint16_t channel = msg_lsb & 0xFF;
+        const uint32_t output_address = (uint32_t)capture_adc(channel);
+        return (MAKEDWORD(VSPA_HALF_WORDS(output_address), lime_Result_Success));
+    }
 
     default:
         // not a valid command, NACK
         return (MAKEDWORD(op_code, lime_Result_InvalidValue));
         break;
     }
-    return 0;
+    return lime_Result_Error;
 }
 
 // called by bootloader on first run
@@ -223,6 +257,13 @@ inline void ProcessMBox(void) {
 #define GO_REASON_IPPU (1 << 1)
 #define GO_REASON_HOST (1 << 0)
 
+void ProcessTxDMA(void) {
+    if (dmac_event(1 << 11))
+        dac_dma_complete(0);
+    if (dmac_event(1 << 7))
+        tx_ddr_complete(0);
+}
+
 // gets called by event triggers
 __attribute__((noreturn)) void main(void) {
     if (first_run) {
@@ -261,16 +302,7 @@ __attribute__((noreturn)) void main(void) {
             ddr_dma_complete(1);
         if (dmac_is_complete(1 << 12))
             ddr_dma_complete(0);
-        if (dmac_event(1 << 11))
-            dac_dma_complete(0);
-        // if (compl & (1<<10))
-        //     dma_done_callback[10]();
-        // if (compl & (1<<9))
-        //     dma_done_callback[9]();
-        // if (compl & (1<<8))
-        //     dma_done_callback[8]();
-        if (dmac_event(1 << 7))
-            tx_ddr_complete(0); // dma_done_callback[7]();
+        ProcessTxDMA();
         // if (compl & (1<<6))
         //     dma_done_callback[6]();
         // if (compl & (1<<5))
