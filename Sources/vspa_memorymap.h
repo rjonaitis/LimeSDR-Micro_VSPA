@@ -19,6 +19,7 @@ typedef enum {
     VSPA_MMAP_STATS,
     VSPA_MMAP_STATS2,
     VSPA_MMAP_TX_TONE_LANE0,
+    VSPA_MMAP_VSPA_CORE_STATS,
 } e_vspa_feature;
 
 typedef struct {

@@ -17,6 +17,15 @@ struct PipeStats {
     uint32_t dfe_err;
     uint32_t dfe_udr;
     uint32_t dfe_ovr;
+    uint32_t host_udr;
+    uint32_t afe_drop;
+    uint32_t dfe_drop;
+};
+
+struct VSPA_Stats {
+    uint32_t busy_cycles;
+    uint32_t ext_go_count;
+    uint32_t go_count;
 };
 
 extern vspa_state_t state;

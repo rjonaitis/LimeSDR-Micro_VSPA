@@ -20,10 +20,12 @@
 #include "opstatus.h"
 #include "iqstream_signals.h"
 #include "vspa_iqstream.h"
+#include "phytimer.h"
 
 vspa_state_t state;
 
 extern const vspa_feature_t features_map[];
+struct VSPA_Stats vspa_core_stats;
 
 bool first_run = true;
 inline void HostMBox0Post(uint64_t msg64) { host_mbox0_post(msg64); }
@@ -114,12 +116,19 @@ __attribute__((noreturn)) static void terminate(void) __noreturn {
 __attribute__((noreturn)) void SwReset(void) __noreturn {
 
     HostMBox0Post(MAKEDWORD(0x0, 0x1));
-    axiq_fifo_rx_disable(AXIQ_BANK_0, AXIQ_FIFO_RX0);
-    axiq_fifo_rx_disable(AXIQ_BANK_0, AXIQ_FIFO_RX1);
-    axiq_fifo_rx_disable(AXIQ_BANK_0, AXIQ_FIFO_RX2);
-    axiq_fifo_rx_disable(AXIQ_BANK_0, AXIQ_FIFO_RX3);
+    axiq_rx_disable();
     axiq_fifo_tx_disable(AXIQ_BANK_0, AXIQ_FIFO_TX0);
     terminate();
+}
+
+uint32_t stream_origin_phytime = 0;
+
+extern struct PipeStats rx_stats[RX_MAX_LANE_COUNT];
+
+static void stream_start_now(void) {
+    const uint32_t phytime_now = gpird(4); // Phytimer
+    stream_origin_phytime = phytime_now + 256;
+    stream_trig_schedule_async(ePhyTimerComparatorOut1, stream_origin_phytime);
 }
 
 uint64_t HandleCommand(uint64_t msg64) {
@@ -195,6 +204,15 @@ uint64_t HandleCommand(uint64_t msg64) {
         const uint32_t output_address = (uint32_t)capture_adc(channel);
         return (MAKEDWORD(VSPA_HALF_WORDS(output_address), lime_Result_Success));
     }
+    case MBOX_OPC_STREAM_START: {
+        stream_start_now();
+        return (MAKEDWORD(0, lime_Result_Success));
+    }
+    case MBOX_OPC_TRACE_RESET: {
+        l1_trace_init();
+        TRACE_EVENT(T_TRACE_PUSH, DEFAULT_THREAD_ID, 0);
+        return (MAKEDWORD(0, lime_Result_Success));
+    }
 
     default:
         // not a valid command, NACK
@@ -224,7 +242,7 @@ static void BootEntry(void) {
          ,
          0x0F000001 | (1 << 11));
 
-    iowr(EXT_GO_ENA, 0x1, 0xFF); // enable exteral GO event
+    iowr(EXT_GO_ENA, 0xFF, 0xFF); // enable exteral GO event
     // entry(main);
 }
 
@@ -258,14 +276,15 @@ inline void ProcessMBox(void) {
 #define GO_REASON_HOST (1 << 0)
 
 void ProcessTxDMA(void) {
+    if (dmac_is_complete(1 << 7))
+        tx_ddr_complete(0);
     if (dmac_event(1 << 11))
         dac_dma_complete(0);
-    if (dmac_event(1 << 7))
-        tx_ddr_complete(0);
 }
 
 // gets called by event triggers
 __attribute__((noreturn)) void main(void) {
+    const uint32_t cyccnt = ccnt_read();
     if (first_run) {
         BootEntry();
         entry(main);
@@ -274,39 +293,29 @@ __attribute__((noreturn)) void main(void) {
         receiver_init();
         transmitter_init();
     }
-    ++state.go_count;
-
     TRACE_START_DURATION(t1);
+    ++vspa_core_stats.go_count;
     const uint32_t ctrl = iord(CONTROL);
-
-    // TRACE_BEGIN(T_GO, 1, ctrl);
+    TRACE_COUNTER(CNT_TX_DMA_ALLOWED, gpird(1, 1 << 16));
 
     // DMA is time critical, process it first
     if (ctrl & GO_REASON_EXT) // phytimer triggered GO
     {
         TRACE_EVENT(T_EXTERNAL_GO, 1, 0);
+        ++vspa_core_stats.ext_go_count;
+        tx_deffered_start();
 
-        // iowr(EXT_GO_STAT, 0xFF, 0xFF); // clear external GO
+        iowr(EXT_GO_STAT, 0xFF, 0xFF); // clear external GO
     }
 
-    if (ctrl & GO_REASON_DMA) {
-        // const uint32_t events = dmac_event();
-        // TRACE_EVENT(TG_VCPU, T_GO, compl, 1);
-
-        // dmac_clear_event(events);
-        // if (compl &(1 << 15))
-        //     VSPA_PROXY_complete(); // dma_done_callback[15]();
-        // if (compl & (1<<14))
-        //     OnDDRWR_Completed();//dma_done_callback[14]();
+    // if (ctrl & GO_REASON_DMA)
+    {
+        tx_check_axiq_udr();
         if (dmac_is_complete(1 << 13))
             ddr_dma_complete(1);
         if (dmac_is_complete(1 << 12))
             ddr_dma_complete(0);
         ProcessTxDMA();
-        // if (compl & (1<<6))
-        //     dma_done_callback[6]();
-        // if (compl & (1<<5))
-        //     dma_done_callback[5]();
 
         for (int lane = 0; lane < RX_MAX_LANE_COUNT; ++lane) {
             if (dmac_event(1 << adc[lane].dma_channel))
@@ -324,15 +333,14 @@ __attribute__((noreturn)) void main(void) {
 
     if (ctrl & GO_REASON_HOST_VSP_FLAGS) {
         const uint32_t f = iord(HOST_VCPU_FLAGS0);
-        TRACE_START_DURATION(t3);
+        // TRACE_START_DURATION(t3);
         HandleCommandFlags();
-        TRACE_DURATION(T_HOST_PRODUCE, f, t3);
+        // TRACE_DURATION(T_HOST_PRODUCE, f, t3);
     }
 
-    TRACE_DURATION(T_GO, ctrl, t1);
-    // TRACE_END(T_GO, 1, ctrl);
-    // VSPA_PROXY_update();
     push_traces();
+    TRACE_DURATION(T_BUSY, DEFAULT_THREAD_ID, t1);
 
+    vspa_core_stats.busy_cycles += ccnt_read() - cyccnt;
     __builtin_done();
 }

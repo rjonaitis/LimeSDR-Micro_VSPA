@@ -1,15 +1,16 @@
 #include "iqstream_signals.h"
 
 #include "receiver.h"
+#include "vspa_iqstream.h"
 #include "transmitter.h"
 
 void clear_htv_signal(uint32_t mask) { iowr(HOST_VCPU_FLAGS0, mask); }
 
 extern struct DebugStats2 stats2;
+extern struct PipeStats rx_stats[RX_MAX_LANE_COUNT];
 
 void HandleCommandFlags(void) {
     uint32_t flags = iord(HOST_VCPU_FLAGS0);
-
     for (int lane = 0; lane < RX_MAX_LANE_COUNT; ++lane) {
         if (flags & (HTV_SIGNAL_RXLANE0_ABORT << lane))
             rx_lane_stop(lane);
@@ -17,8 +18,7 @@ void HandleCommandFlags(void) {
             rx_lane_prime(lane);
 
         if (flags & rxddr[lane].dma.htv_tcd_pending_flag_mask) {
-            flags &= ~(rxddr[lane].dma.htv_tcd_pending_flag_mask);
-            clear_htv_signal(rxddr[lane].dma.htv_tcd_pending_flag_mask);
+            host_submitted_rx_tcd(lane);
         }
     }
     for (int lane = 0; lane < TX_MAX_LANE_COUNT; ++lane) {
@@ -28,13 +28,7 @@ void HandleCommandFlags(void) {
             tx_lane_prime(lane);
 
         if (flags & txddr[lane].dma_hif.htv_tcd_pending_flag_mask) {
-            flags &= ~(txddr[lane].dma_hif.htv_tcd_pending_flag_mask);
-
-            tx_lane_try_ddr_enqueue(&txddr[lane]);
-            if (!tcd_fifo_isempty(&txddr[lane].dma_hif.tcd_table))
-                tx_lane_try_ddr_enqueue(&txddr[lane]);
-
-            clear_htv_signal(txddr[lane].dma_hif.htv_tcd_pending_flag_mask);
+            host_submitted_tx_tcd(lane);
         }
     }
 

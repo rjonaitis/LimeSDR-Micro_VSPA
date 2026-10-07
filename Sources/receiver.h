@@ -24,22 +24,22 @@ typedef struct RxBufferMetaData {
 typedef struct RxDDR_lane {
     vspa_dma_hif_t dma;
     cfixed16_t *base_buffer;
-    cfixed16_t *write_head;
     rx_meta_t meta[2];
     uint32_t count_dmac_enque;
     uint32_t count_dmac_complete;
     uint16_t dma_channel;
     uint16_t buf_filled;
     uint16_t decimate_pow2;
+    dma_tcd_t wip_tcd;
 } rx_ddr_pipeline_t;
 
 typedef struct ADC_lane {
     cfixed16_t *base_buffer;
-    cfixed16_t *next_completion_buffer;
     uint32_t axi_fifo_addr;
     uint32_t count_dmac_complete;
     uint16_t axi_fifo_index;
     uint16_t dma_channel;
+    uint16_t phytimer_id;
 } adc_pipeline_t;
 
 #define RX_MAX_LANE_COUNT 1
@@ -59,5 +59,6 @@ void ddr_dma_complete(uint16_t lane);
 
 vspa_complex_float32 *rx_fft(uint16_t channel);
 cfixed16_t *capture_adc(uint16_t channel);
+void host_submitted_rx_tcd(uint16_t lane);
 
 #endif /* IQMOS_RX_H_ */

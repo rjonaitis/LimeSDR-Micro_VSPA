@@ -51,7 +51,7 @@
 #define VSPA_DEFAULT_TIMEOUT 2000
 
 // VSPA addresing is in 16bit granularity
-#define VSPA_HALF_WORDS(x) (2 * (uint32_t)x)
+#define VSPA_HALF_WORDS(x) ((uint32_t)x << 1)
 
 // VSPA addresses in half words (16bits), DMA uses bytes (8bits)
 #define VCPU_ADDR_FOR_DMA(x) (((uint32_t)x) << 1)

@@ -58,8 +58,8 @@
 #define PHY_TMR_SC_ADDR(id) (PHY_TMR_C0SC + (id * 0x8)) // PHY Timer comparator status and control register address.
 #define PHY_TMR_V_ADDR(id) (PHY_TMR_C0V + (id * 0x8)) // PHY Timer comparator status and control register address.
 
-static uint32_t scratch_buf_addrs[6] = { 0 };
-static uint32_t scratch_buf_values[6] = { 0 };
+static uint32_t scratch_buf_addrs[10] = { 0 };
+static uint32_t scratch_buf_values[10] = { 0 };
 
 uint32_t timer_trig_immediate_async(uint32_t id, enum ePhyTimerComparatorTrigger trigger) {
     if (!dmac_is_available(PHY_TMR_DMA_CHAN_MASK))
@@ -71,8 +71,6 @@ uint32_t timer_trig_immediate_async(uint32_t id, enum ePhyTimerComparatorTrigger
     scratch_buf_addrs[1] = PHY_TMR_SC_ADDR(id);
     scratch_buf_values[1] = trigger << 2;
 
-    TRACE_EVENT(T_PHYTIMER, id, trigger);
-    // TRACE_BEGIN(TG_DMA, T_XFER_BUFFER, 0, PHY_TMR_DMA_CHAN);
     dmac_enable(DMAC_DI32 | PHY_TMR_DMA_CHAN, 2, VSPA_HALF_WORDS(scratch_buf_addrs), VSPA_HALF_WORDS(scratch_buf_values));
     return PHY_TMR_DMA_CHAN_MASK;
 }
@@ -98,7 +96,6 @@ uint16_t timer_trig_schedule_async(uint32_t id, enum ePhyTimerComparatorTrigger 
     scratch_buf_values[0] = PHY_TIMER_COMPARATOR_DISABLE | PHY_TIMER_COMPARATOR_CLEAR_INT;
     scratch_buf_values[1] = trigger;
     scratch_buf_values[2] = timestamp;
-    TRACE_EVENT(T_PHYTIMER, id, timestamp);
     dmac_enable(DMAC_DI32 | PHY_TMR_DMA_CHAN, 3, VSPA_HALF_WORDS(scratch_buf_addrs), VSPA_HALF_WORDS(scratch_buf_values));
     return PHY_TMR_DMA_CHAN_MASK;
 }
@@ -110,4 +107,38 @@ uint16_t timer_trig_schedule(uint32_t id, enum ePhyTimerComparatorTrigger trigge
 
     WAIT_TIMEOUT_R(dmac_is_complete(dmamask), VSPA_DEFAULT_TIMEOUT);
     return dmamask;
+}
+
+void stream_trig_schedule_async(enum ePhyTimerComparatorTrigger trigger, uint32_t timestamp) {
+    if (!dmac_is_available(PHY_TMR_DMA_CHAN_MASK))
+        return;
+
+    dmac_clear_complete(PHY_TMR_DMA_CHAN_MASK);
+    scratch_buf_addrs[0] = PHY_TMR_SC_ADDR(1);
+    scratch_buf_addrs[1] = PHY_TMR_SC_ADDR(2);
+    scratch_buf_addrs[2] = PHY_TMR_SC_ADDR(3);
+    scratch_buf_addrs[3] = PHY_TMR_SC_ADDR(4);
+    scratch_buf_addrs[4] = PHY_TMR_SC_ADDR(11);
+
+    scratch_buf_values[0] = PHY_TIMER_COMPARATOR_DISABLE | PHY_TIMER_COMPARATOR_CLEAR_INT | trigger;
+    scratch_buf_values[1] = scratch_buf_values[0];
+    scratch_buf_values[2] = scratch_buf_values[0];
+    scratch_buf_values[3] = scratch_buf_values[0];
+    scratch_buf_values[4] = scratch_buf_values[0];
+
+    scratch_buf_addrs[5] = PHY_TMR_V_ADDR(1);
+    scratch_buf_addrs[6] = PHY_TMR_V_ADDR(2);
+    scratch_buf_addrs[7] = PHY_TMR_V_ADDR(3);
+    scratch_buf_addrs[8] = PHY_TMR_V_ADDR(4);
+    scratch_buf_addrs[9] = PHY_TMR_V_ADDR(11);
+
+    // only do Rx triggers, Tx will be scheduled by host
+    scratch_buf_values[5] = timestamp;
+    scratch_buf_values[6] = scratch_buf_values[5];
+    scratch_buf_values[7] = scratch_buf_values[5];
+    scratch_buf_values[8] = scratch_buf_values[5];
+
+    dmac_enable(DMAC_DI32 | PHY_TMR_DMA_CHAN, 9, VSPA_HALF_WORDS(scratch_buf_addrs), VSPA_HALF_WORDS(scratch_buf_values));
+
+    WAIT_TIMEOUT_R(dmac_is_complete(PHY_TMR_DMA_CHAN_MASK), VSPA_DEFAULT_TIMEOUT);
 }

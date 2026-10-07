@@ -8,6 +8,7 @@
 extern struct ADC_lane adc[];
 extern struct PipeStats rx_stats[];
 extern struct PipeStats tx_stats;
+extern struct VSPA_Stats vspa_core_stats;
 
 // table of memory locations that can be discovered by software and interacted directly
 const vspa_feature_t features_map[] __attribute__((section(".mmap_entry"))) = {
@@ -28,5 +29,6 @@ const vspa_feature_t features_map[] __attribute__((section(".mmap_entry"))) = {
     { VSPA_MMAP_STATS, (uint32_t)&rx_stats[0] },
     { VSPA_MMAP_STATS2, (uint32_t)&tx_stats },
     { VSPA_MMAP_TX_TONE_LANE0, (uint32_t)&tx_tone_state[0] },
+    { VSPA_MMAP_VSPA_CORE_STATS, (uint32_t)&vspa_core_stats },
     { VSPA_MMAP_NONE, 0 }
 };

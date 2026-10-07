@@ -12,31 +12,36 @@
 #include <stdint.h>
 
 typedef struct TxBufferMetaData {
+    uint32_t phytime;
     uint32_t flags;
 } tx_meta_t;
 
 typedef struct TxDDR_lane {
     vspa_dma_hif_t dma_hif;
     cfixed16_t *base_buffer;
-    cfixed16_t *enque_head;
     cfixed16_t *ready_buffer;
     dma_tcd_fifo_t tcd_table;
     tx_meta_t meta[2];
     uint32_t count_dmac_enque;
     uint32_t count_dmac_complete;
     uint16_t dma_channel;
-    uint16_t ready_buffer_count;
+    uint32_t buffers_consumed;
     uint16_t ready_buffer_offset;
+    bool deffered;
 } tx_ddr_pipeline_t;
 
 typedef struct DAC_lane {
     cfixed16_t *base_buffer;
-    cfixed16_t *next_buffer;
+    uint32_t start_phytime;
+    uint32_t buffers_provided;
     uint32_t count_dmac_enque;
+    uint32_t count_dmac_complete;
+    tx_meta_t meta[2];
 
     uint32_t axi_fifo_addr;
     uint16_t axi_fifo_index;
     uint16_t dma_channel;
+    bool reschedule;
 } dac_pipeline_t;
 
 typedef struct TxPipeline {
@@ -59,8 +64,13 @@ void tx_lane_abort(uint16_t lane);
 
 void dac_dma_complete(uint16_t lane);
 void tx_ddr_complete(uint16_t lane);
-void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr);
+void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr, bool vcpu_trig);
 
 int tx_tone_enable(uint16_t lane, bool enable);
+void host_submitted_tx_tcd(uint16_t lane);
+void tx_check_axiq_udr(void);
+
+void deffer_next_tx_burst(uint32_t phytime);
+void tx_deffered_start(void);
 
 #endif /* IQMOS_RX_H_ */

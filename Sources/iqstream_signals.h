@@ -35,5 +35,6 @@ enum VTH_Signal {
 };
 
 void clear_htv_signal(uint32_t mask);
+void vspa_to_host_signal(uint32_t flags);
 
 #endif // LIME_IQSTREAM_SIGNALS_H

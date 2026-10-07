@@ -17,44 +17,27 @@ typedef struct l1_trace_data_s {
 } l1_trace_data_t;
 
 enum {
-    T_XFER_BUFFER = 0,
-    T_QEC_TX_BUFFER,
-    T_QEC_RX_BUFFER,
-    T_DEC_BUFFER,
-    T_INT_BUFFER,
-    T_UNDERRUN,
-    T_OVERRUN,
-    T_XFER_ERROR,
-    T_XFER_CFG_ERROR,
-    T_UNEXPECTED,
-    T_NO_MEMORY,
-    T_AXIQ_ENQ,
-    T_DDR_ENQ,
+    T_BUSY = 0,
     T_GO,
-    T_ADC_ENQ,
-    T_DAC,
-    T_DDR_RD,
-    T_DDR_WR,
-    T_HOST_PRODUCE,
-    T_DMA_NOT_AVAILABLE,
-    T_AXIQ_COMPLETE,
-    T_DDR_COMPLETE,
-    T_AXIQ_TX_ENABLE,
-    T_AXIQ_RX0_ENABLE,
-    T_AXIQ_RX1_ENABLE,
-    T_AXIQ_RO0_ENABLE,
-    T_AXIQ_RO1_ENABLE,
-    T_BUFFER_FILL,
-    T_INTER_CACHE_FILL,
-    T_DEC_CACHE_FILL,
-    T_PHYTIMER,
-    T_ERROR,
-    T_TIME_NOW,
-    T_MBOX,
-    T_ADC_COMPLETE,
-    T_DDR_WR_COMPLETE,
+    T_XFER_BUFFER,
     T_EXTERNAL_GO,
-    T_GENERATE_TONE,
+    T_TRACE_PUSH,
+    T_DDR_WR_ENQ,
+    T_DDR_RD_ENQ,
+    T_DDR_WR_COMPLETE,
+    T_DDR_RD_COMPLETE,
+    T_ADC_COMPLETE,
+    T_DAC_COMPLETE,
+    T_RX_WORK,
+    T_TX_WORK,
+    T_ADC_ENQ,
+    T_DAC_ENQ,
+    T_DAC_AXIQ_RST,
+    T_ADC_AXIQ_RST,
+    T_TX_BURST_START,
+    T_TX_BURST_DEFFER,
+    T_PHYTIME,
+    T_MBOX
 };
 
 typedef struct l1_trace_state_s {
@@ -65,20 +48,33 @@ typedef struct l1_trace_state_s {
     uint32_t event_drops;
 } l1_trace_hif_t; // L1 trace host interface
 
+extern void l1_trace_init(void);
+
 #if TRACE_ENABLED
 extern l1_trace_hif_t trace_hif;
-extern void l1_trace_init(void);
+extern l1_trace_data_t *next_event;
 extern void l1_trace_clear(void);
 void l1_trace_upload(void);
-void l1_trace(uint32_t msg, uint32_t param);
 
-void l1_trace_duration(uint64_t startcnt, uint32_t msg);
+static inline void l1_trace(uint32_t msg, uint32_t param) {
+    next_event->cnt = ccnt_read(); // ccnt_read itself is 5 cycles
+    next_event->msg = msg;
+    next_event->param = param;
+    ++next_event;
+}
+
+static inline void l1_trace_duration(uint64_t startcnt, uint32_t msg) {
+    next_event->cnt = startcnt;
+    next_event->msg = msg;
+    next_event->param = ccnt_read() - startcnt;
+    ++next_event;
+}
 
 void push_traces();
 void check_l1_trace_complete(void);
 
 #else
-static inline void l1_trace_init(void) {}
+// static inline void l1_trace_init(void) {}
 static inline void l1_trace_clear(void) {}
 static inline void l1_trace_upload(void) {}
 static inline void l1_trace(uint32_t msg, uint32_t param) {}
@@ -103,31 +99,19 @@ enum {
 };
 
 enum {
-    CNT_TX_UDR,
-    CNT_TX_OVR,
-    CNT_RX0_UDR,
-    CNT_RX1_UDR,
-    CNT_RX2_UDR,
-    CNT_RX3_UDR,
-    CNT_RX0_OVR,
-    CNT_RX1_OVR,
-    CNT_RX2_OVR,
-    CNT_RX3_OVR,
-    CNT_DECIM,
-    CNT_INTERP,
+    CNT_GO,
+    CNT_HOST_UDR,
+    CNT_TX_DFE_UDR,
+    CNT_TX_AFE_UDR,
+    CNT_TX_AFE_OVR,
+    CNT_RX_DDR_ENQ,
+    CNT_TX_DDR_ENQ,
+    CNT_TX_TCD,
+    CNT_TX_DIFF,
+    CNT_TX_DMA_ALLOWED,
     CNT_PHYTIME,
-    CNT_TX_AXIQ_EN,
-    CNT_TX_DMA_ALLOW,
-    CNT_DDR_RD_ENQ,
-    CNT_DDR_RD_READY,
     CNT_ADC_ENQ,
-    CNT_DAC_ENQ,
-    CNT_DAC_COMPLETION_TIME,
-    CNT_DDR_RD_COMPLETION_TIME,
-    CNT_DDR_WR_ENQ,
-    CNT_ADC_READY,
-    CNT_DAC_READY,
-    CNT_POOL,
+    CNT_DAC_ENQ
 };
 
 #if TRACE_ENABLED

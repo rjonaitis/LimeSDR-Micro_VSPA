@@ -40,7 +40,7 @@
 #define DDR_XFER_SIZE_BYTES (DDR_XFER_SAMPLE_COUNT * 4)
 
 cfixed16_t adc_buffer[RX_MAX_LANE_COUNT][MAX_DMA_ENQ * ADC_XFER_SAMPLE_COUNT]
-    __attribute__((DMEM_ALIGNMENT_ATTR, section(".vcpu_dmem")));
+    __attribute__((DMEM_ALIGNMENT_ATTR, section(".ippu_dmem")));
 cfixed16_t ddr_write_buffer[RX_MAX_LANE_COUNT][MAX_DMA_ENQ * DDR_XFER_SAMPLE_COUNT]
     __attribute__((DMEM_ALIGNMENT_ATTR, section(".vcpu_dmem")));
 
@@ -96,18 +96,23 @@ static void rx_axiq_fifo_reset(uint16_t lane) {
     const uint32_t dma_mask = (1 << adc[lane].dma_channel);
     dmac_abort(dma_mask);
 
+    timer_trig_immediate(12, ePhyTimerComparatorOut0);
+
     axiq_fifo_rx_disable(AXIQ_BANK_0, (enum axiq_fifo_e)adc[lane].axi_fifo_index); // falling edge enters flush mode
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
     stream_read_ptr_rst(lane); // exits flush mode
 
-    WAIT_FOR(!dmac_is_enabled(dma_mask), VSPA_DEFAULT_TIMEOUT);
+    WAIT_FOR(dmac_is_complete(dma_mask), VSPA_DEFAULT_TIMEOUT);
     dma_clear_all_bits(dma_mask);
 }
 
 static inline void rx_adc_pipe_reset(adc_pipeline_t *adc, cfixed16_t *buffer) {
     adc->base_buffer = buffer;
-    adc->next_completion_buffer = buffer;
     adc->count_dmac_complete = 0;
+
+    const enum axiq_fifo_e fifo_index = (enum axiq_fifo_e)adc->axi_fifo_index;
+    axiq_fifo_rx_cr(AXIQ_BANK_0, fifo_index, AXIQ_CR_CLRERR, AXIQ_CR_CLRERR);
+    axiq_fifo_rx_cr(AXIQ_BANK_0, fifo_index, AXIQ_CR_CLRERR, 0);
 
     // reset dma
     dma_clear_all_bits(1 << adc->dma_channel);
@@ -115,7 +120,6 @@ static inline void rx_adc_pipe_reset(adc_pipeline_t *adc, cfixed16_t *buffer) {
 
 static inline void rx_ddr_pipe_reset(rx_ddr_pipeline_t *ddr, cfixed16_t *buffer) {
     ddr->base_buffer = buffer;
-    ddr->write_head = buffer;
     ddr->count_dmac_enque = 0;
     ddr->count_dmac_complete = 0;
     ddr->buf_filled = 0;
@@ -134,6 +138,7 @@ int rx_select_channel(uint16_t lane, e_rx_channel channel) {
     adc[lane].axi_fifo_addr = RO0_AXI_FIFO_ADDR + (channel * 0x1000) + addr_beat_offset;
     adc[lane].axi_fifo_index = (enum axiq_fifo_e)(AXIQ_FIFO_RX0 + channel);
     adc[lane].dma_channel = RO0_ADC_RD_DMA_CHANNEL + channel;
+    adc[lane].phytimer_id = PHY_TIMER_COMP_CH1_RX_ALLOWED + channel;
     rx_adc_pipe_reset(&adc[lane], adc_buffer[lane]);
 
     rxddr[lane].dma_channel = DDR_WR_DMA_CHANNEL_1 + lane;
@@ -141,7 +146,7 @@ int rx_select_channel(uint16_t lane, e_rx_channel channel) {
 
     rx_generator[lane].amplitude = 0.9;
     rx_generator[lane].phase = 0;
-    rx_generator[lane].freq_bin = 8192;
+    rx_generator[lane].freq_bin = 1;
 
     rxddr[lane].dma.htv_tcd_pending_flag_mask = (HTV_SIGNAL_RXLANE0_TCD_PENDING << lane);
     rxddr[lane].dma.vth_tcd_done_flag_mask = (VTH_SIGNAL_RXLANE0_TCD_DONE << lane);
@@ -172,11 +177,14 @@ static inline void initial_adc_enq(uint16_t lane) {
     const uint32_t dma_ctrl = adc[lane].dma_channel | DMAC_FIFO | DMAC_RDC | DMAC_TRIG_VCPU;
     dmac_prep_a_s(ADC_XFER_SIZE_BYTES, adc[lane].axi_fifo_addr);
     dmac_enable_v_c(dma_ctrl, VCPU_ADDR_FOR_DMA(adc_buffer[lane]));
+    TRACE_DMA_BEGIN(adc[lane].dma_channel, rx_stats[lane].afe_enq & 1);
+    ++rx_stats[lane].afe_enq;
     dmac_enable_v_c(dma_ctrl, VCPU_ADDR_FOR_DMA(&adc_buffer[lane][ADC_XFER_SAMPLE_COUNT]));
-    rx_stats[lane].afe_enq += 2;
+    TRACE_DMA_BEGIN(adc[lane].dma_channel, rx_stats[lane].afe_enq & 1);
+    ++rx_stats[lane].afe_enq;
 }
 
-inline static void rx_lane_try_ddr_enqueue(uint16_t lane) {
+inline static void rx_lane_try_ddr_enqueue(uint16_t lane, const cfixed16_t *buffer) {
     TRACE_START_DURATION(t1);
     rx_ddr_pipeline_t *const ddr = &rxddr[lane];
     if (!dmac_is_available(1 << ddr->dma_channel)) {
@@ -192,10 +200,10 @@ inline static void rx_lane_try_ddr_enqueue(uint16_t lane) {
     rx_meta_t *const meta = &ddr->meta[ddr->count_dmac_enque & 0x1];
     meta->flags = 0;
 
-    volatile dma_tcd_t *const tcd = tcd_fifo_front(&ddr->dma.tcd_table);
+    volatile dma_tcd_t *const tcd = &ddr->wip_tcd;
     const uint32_t xfer_size = tcd->size > DDR_XFER_SIZE_BYTES ? DDR_XFER_SIZE_BYTES : tcd->size;
 
-    iowr(DMA_DMEM_PRAM_ADDR, VCPU_ADDR_FOR_DMA(ddr->write_head));
+    iowr(DMA_DMEM_PRAM_ADDR, VCPU_ADDR_FOR_DMA(buffer));
     iowr(DMA_AXI_ADDRESS, tcd->la9310_mem_address);
     iowr(DMA_AXI_BYTE_CNT, xfer_size);
 
@@ -207,19 +215,21 @@ inline static void rx_lane_try_ddr_enqueue(uint16_t lane) {
     uint32_t dma_ctrl = DMAC_WRC | ddr->dma_channel;
     if (tcd->size == 0) {
         meta->flags |= PKT_DMA_TCD_END;
+        *(tcd_fifo_back(&ddr->dma.tcd_table)) = *tcd_fifo_front(&ddr->dma.tcd_table);
         tcd_fifo_pop(&ddr->dma.tcd_table);
+        tcd_fifo_push(&ddr->dma.tcd_table);
+        ddr->wip_tcd = *tcd_fifo_front(&ddr->dma.tcd_table);
     }
 
     iowr(DMA_XFR_CTRL, dma_ctrl);
-    // TRACE_DMA_BEGIN(ddr->dma_channel, ddr->write_head);
-    ++rx_stats[lane].dfe_enq;
+    TRACE_DMA_BEGIN(ddr->dma_channel, ddr->count_dmac_enque & 1);
     ++ddr->count_dmac_enque;
-    ddr->write_head = ddr->base_buffer + (ddr->count_dmac_enque & 0x1) * DDR_XFER_SAMPLE_COUNT;
-    TRACE_DURATION(T_DDR_WR, DEFAULT_THREAD_ID, t1);
+    rx_stats[lane].dfe_enq = ddr->count_dmac_enque;
+
+    TRACE_DURATION(T_DDR_WR_ENQ, DEFAULT_THREAD_ID, t1);
 }
 
 static inline void decimate(uint16_t lane, cfixed16_t *restrict dest, volatile cfixed16_t *restrict src, uint16_t src_count) {
-    TRACE_START_DURATION(t1);
     switch (rxddr[lane].decimate_pow2) {
     default:
     case 1:
@@ -229,79 +239,71 @@ static inline void decimate(uint16_t lane, cfixed16_t *restrict dest, volatile c
         decimator_4x_8_Taps_asm(dest, src, rx_filter_taps_downsampling, decimation_history[lane], src_count);
         break;
     }
-    TRACE_DURATION(T_DEC_BUFFER, 1, t1);
 }
 
 void adc_dma_complete(uint16_t lane) {
+    TRACE_DMA_END(adc[lane].dma_channel, adc[lane].count_dmac_complete & 1);
     TRACE_START_DURATION(t1);
-    TRACE_DMA_END(adc[lane].dma_channel, adc[lane].next_completion_buffer);
-    cfixed16_t *const completed_buffer = adc[lane].next_completion_buffer;
+    const uint16_t dma_mask = (1 << adc[lane].dma_channel);
+    dmac_clear_complete(dma_mask); // don't care about complete, checking only event
+    dmac_clear_event(dma_mask);
+    rx_ddr_pipeline_t *const ddr = &rxddr[lane];
 
     check_adc_axi_status(lane);
 
-    const uint16_t dma_mask = (1 << adc[lane].dma_channel);
-    dmac_clear_complete(dma_mask);
-    dmac_clear_event(dma_mask);
-
-    ++rx_stats[lane].afe_compl;
-
-    rx_ddr_pipeline_t *const ddr = &rxddr[lane];
-    cfixed16_t *const dest = ddr->write_head + ddr->buf_filled;
-
-    // work
-    const uint16_t input_count = ADC_XFER_SAMPLE_COUNT;
-    if (ddr->decimate_pow2) {
-        TRACE_START_DURATION(t2);
-        // in place processing
-        rx_qec_correction(completed_buffer, completed_buffer, ADC_XFER_SAMPLE_COUNT);
-        TRACE_DURATION(T_QEC_RX_BUFFER, DEFAULT_THREAD_ID, t2);
-        decimate(lane, dest, completed_buffer, ADC_XFER_SAMPLE_COUNT);
-    } else {
-        TRACE_START_DURATION(t2);
-        // in place processing
-        // rx_qec_correction(adc[lane].next_completion_buffer, adc[lane].next_completion_buffer, ADC_XFER_SAMPLE_COUNT);
-        // gen_nco_single_tone(rxddr[lane].write_head, ADC_XFER_SAMPLE_COUNT, &rx_generator[lane]);
-        // gen_nco_single_tone(ddr_write_buffer[lane], 2*ADC_XFER_SAMPLE_COUNT, &rx_generator[lane]);
-
-        // process into ddr buffer
-        rx_qec_correction(dest, completed_buffer, ADC_XFER_SAMPLE_COUNT);
-        TRACE_DURATION(T_QEC_RX_BUFFER, DEFAULT_THREAD_ID, t2);
-    }
-
-    ddr->buf_filled += (input_count >> ddr->decimate_pow2);
-
-    // ADC self perpetuating, reenque new tranfer on each completion
-    if (dmac_is_available(dma_mask)) {
-        dmac_enable(adc[lane].dma_channel | DMAC_RDC | DMAC_FIFO | DMAC_TRIG_VCPU, // flags
-                    ADC_XFER_SIZE_BYTES, // size
-                    adc[lane].axi_fifo_addr, // axi addr
-                    VCPU_ADDR_FOR_DMA(completed_buffer) // dmem addr
-        );
-        ++rx_stats[lane].afe_enq;
-    } else
-        ++rx_stats[lane].afe_ovr;
-
-    if (ddr->buf_filled >= DDR_XFER_SAMPLE_COUNT) {
-        rx_lane_try_ddr_enqueue(lane);
-        ddr->buf_filled = 0;
-    }
+    cfixed16_t *const completed_buffer = adc[lane].base_buffer + (adc[lane].count_dmac_complete & 0x1) * ADC_XFER_SAMPLE_COUNT;
 
     ++adc[lane].count_dmac_complete;
-    adc[lane].next_completion_buffer = adc[lane].base_buffer + (adc[lane].count_dmac_complete & 0x1) * ADC_XFER_SAMPLE_COUNT;
+    rx_stats[lane].afe_compl = adc[lane].count_dmac_complete;
+    TRACE_COUNTER(CNT_ADC_ENQ, rx_stats[lane].afe_enq - rx_stats[lane].afe_compl);
 
+    cfixed16_t *const dest = ddr->base_buffer + (ddr->count_dmac_enque & 0x1) * DDR_XFER_SAMPLE_COUNT;
+
+    // work
+    TRACE_START_DURATION(t2);
+    if (ddr->decimate_pow2) {
+        // in place processing
+        rx_qec_correction(completed_buffer, completed_buffer, ADC_XFER_SAMPLE_COUNT);
+        decimate(lane, dest + ddr->buf_filled, completed_buffer, ADC_XFER_SAMPLE_COUNT);
+        TRACE_DURATION(T_RX_WORK, DEFAULT_THREAD_ID, t2);
+        ddr->buf_filled += (ADC_XFER_SAMPLE_COUNT >> ddr->decimate_pow2);
+        if (ddr->buf_filled >= DDR_XFER_SAMPLE_COUNT) {
+            if (dmac_is_complete(1 << ddr->dma_channel))
+                ddr_dma_complete(lane);
+            rx_lane_try_ddr_enqueue(lane, dest);
+            ddr->buf_filled = 0;
+        }
+    } else {
+        // process into ddr buffer
+        rx_qec_correction(dest, completed_buffer, ADC_XFER_SAMPLE_COUNT);
+        TRACE_DURATION(T_RX_WORK, DEFAULT_THREAD_ID, t2);
+        if (dmac_is_complete(1 << ddr->dma_channel))
+            ddr_dma_complete(lane);
+        rx_lane_try_ddr_enqueue(lane, dest);
+    }
+
+    // ADC self perpetuating, reenque new tranfer on each completion
+    dmac_enable((DMAC_RDC | DMAC_FIFO | DMAC_TRIG_VCPU) | adc[lane].dma_channel, // flags
+                ADC_XFER_SIZE_BYTES, // size
+                adc[lane].axi_fifo_addr, // axi addr
+                VCPU_ADDR_FOR_DMA(completed_buffer) // dmem addr
+    );
+    TRACE_DMA_BEGIN(adc->dma_channel, rx_stats[lane].afe_enq & 1);
+    ++rx_stats[lane].afe_enq;
     TRACE_DURATION(T_ADC_COMPLETE, DEFAULT_THREAD_ID, t1);
 }
 
 void ddr_dma_complete(uint16_t lane) {
     TRACE_START_DURATION(t1);
-    // TRACE_DMA_END(rxddr[lane].dma_channel, adc[lane].next_completion_buffer);
     rx_ddr_pipeline_t *const ddr = &rxddr[lane];
+    TRACE_DMA_END(ddr->dma_channel, ddr->count_dmac_complete & 1);
     const rx_meta_t *const meta = &ddr->meta[ddr->count_dmac_complete & 0x1];
 
-    ++rx_stats[lane].dfe_compl;
     ++ddr->count_dmac_complete;
+    rx_stats[lane].dfe_compl = ddr->count_dmac_complete;
+
     dmac_clear_complete(1 << ddr->dma_channel);
-    // dmac_clear_event(1 << ddr->dma_channel); // go event not used for ddr
+    dmac_clear_event(1 << ddr->dma_channel); // go event not used for ddr
 
     if (meta->flags & PKT_DMA_TCD_END) {
         ++ddr->dma.tcd_table.done;
@@ -319,27 +321,31 @@ void receiver_init(void) {
 }
 
 void rx_lane_prime(uint16_t lane) {
-    rx_axiq_fifo_reset(lane);
+    timer_trig_immediate(adc[lane].phytimer_id, ePhyTimerComparatorOut0);
+
     rx_adc_pipe_reset(&adc[lane], adc_buffer[lane]);
     rx_ddr_pipe_reset(&rxddr[lane], ddr_write_buffer[lane]);
-
     memclr(&rx_stats[lane], sizeof(struct PipeStats));
-    initial_adc_enq(lane);
+
+    rx_axiq_fifo_reset(lane);
+    // initial_adc_enq(lane);
 }
 
 void rx_lane_stop(uint16_t lane) {
     const uint32_t dma_mask = (1 << rxddr[lane].dma_channel) | (1 << adc[lane].dma_channel);
+    axiq_fifo_rx_disable(AXIQ_BANK_0, (enum axiq_fifo_e)adc[lane].axi_fifo_index); // enter DMA flush mode
     dmac_abort(dma_mask);
-    // axiq_fifo_rx_disable(AXIQ_BANK_0, (enum axiq_fifo_e)adc[lane].axi_fifo_index); // enter DMA flush mode
     // WAIT_FOR(dmac_is_available(1 << adc[lane].dma_channel), VSPA_DEFAULT_TIMEOUT);
     // stream_read_ptr_rst(lane);
     WAIT_FOR(!dmac_is_running(dma_mask), VSPA_DEFAULT_TIMEOUT);
-
+    timer_trig_immediate(adc[lane].phytimer_id, ePhyTimerComparatorOut0);
     dmac_clear_complete(dma_mask);
     dmac_clear_event(dma_mask);
 }
 
 vspa_complex_float32 *rx_fft(uint16_t channel) {
+    return 0;
+    /*
     uint16_t lane = 0;
     rx_select_channel(lane, channel);
 
@@ -393,12 +399,14 @@ vspa_complex_float32 *rx_fft(uint16_t channel) {
     // memclr(adc_buffer[lane], ADC_XFER_SAMPLE_COUNT*2);
     vspa_complex_float32 *fft_output = (vspa_complex_float32 *)adc_buffer[lane];
     fftDIF512_hfx_sfl(fft_input, fft_output, fft_input, DDR_XFER_SAMPLE_COUNT * 2);
-    return (vspa_complex_float32 *)fft_output;
+    return (vspa_complex_float32 *)fft_output;*/
 }
 
 extern void ProcessTxDMA(void);
 
 cfixed16_t *capture_adc(uint16_t channel) {
+    return 0;
+    /*
     uint16_t lane = 0;
     rx_select_channel(lane, channel);
 
@@ -455,4 +463,14 @@ cfixed16_t *capture_adc(uint16_t channel) {
     rx_lane_stop(lane);
 
     return fft_input;
+    */
+}
+
+// On first TCD enqueues initial DMA transfers for further self triggering
+void host_submitted_rx_tcd(uint16_t lane) {
+    if (rx_stats[lane].afe_enq - adc[lane].count_dmac_complete >= MAX_DMA_ENQ)
+        return; // skip, all adc buffers busy
+
+    rxddr[lane].wip_tcd = *tcd_fifo_front(&rxddr[lane].dma.tcd_table);
+    initial_adc_enq(lane);
 }
