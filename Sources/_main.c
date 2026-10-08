@@ -310,7 +310,9 @@ __attribute__((noreturn)) void main(void) {
 
     // if (ctrl & GO_REASON_DMA)
     {
-        tx_check_axiq_udr();
+        // could check status only on completion, but completion would not get triggered
+        // if underrun cause DMA xfer extend past phytimer disable point and get stuck.
+        tx_check_axiq_status();
         if (dmac_is_complete(1 << 13))
             ddr_dma_complete(1);
         if (dmac_is_complete(1 << 12))

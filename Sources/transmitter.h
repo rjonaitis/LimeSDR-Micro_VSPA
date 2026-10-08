@@ -41,12 +41,21 @@ typedef struct DAC_lane {
     uint32_t axi_fifo_addr;
     uint16_t axi_fifo_index;
     uint16_t dma_channel;
-    bool reschedule;
+    bool reschedule_start;
 } dac_pipeline_t;
 
 typedef struct TxPipeline {
     bool generate_tone;
 } tx_pipeline_t;
+
+typedef struct TxTDD_Config {
+    uint16_t rf_sw_active_trigger;
+    int16_t dac_allowed;
+    int16_t pa_on;
+    int16_t pa_off;
+    int16_t rf_sw_on;
+    int16_t rf_sw_off;
+} tx_tdd_config_t;
 
 #define TX_MAX_LANE_COUNT 1
 
@@ -68,7 +77,7 @@ void tx_lane_try_ddr_enqueue(tx_ddr_pipeline_t *ddr, bool vcpu_trig);
 
 int tx_tone_enable(uint16_t lane, bool enable);
 void host_submitted_tx_tcd(uint16_t lane);
-void tx_check_axiq_udr(void);
+void tx_check_axiq_status(void);
 
 void deffer_next_tx_burst(uint32_t phytime);
 void tx_deffered_start(void);

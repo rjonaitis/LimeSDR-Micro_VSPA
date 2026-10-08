@@ -62,6 +62,7 @@ static uint32_t scratch_buf_addrs[10] = { 0 };
 static uint32_t scratch_buf_values[10] = { 0 };
 
 uint32_t timer_trig_immediate_async(uint32_t id, enum ePhyTimerComparatorTrigger trigger) {
+    WAIT_TIMEOUT_R(dmac_is_available(PHY_TMR_DMA_CHAN_MASK), VSPA_DEFAULT_TIMEOUT);
     if (!dmac_is_available(PHY_TMR_DMA_CHAN_MASK))
         return 0;
 
@@ -140,5 +141,25 @@ void stream_trig_schedule_async(enum ePhyTimerComparatorTrigger trigger, uint32_
 
     dmac_enable(DMAC_DI32 | PHY_TMR_DMA_CHAN, 9, VSPA_HALF_WORDS(scratch_buf_addrs), VSPA_HALF_WORDS(scratch_buf_values));
 
+    WAIT_TIMEOUT_R(dmac_is_complete(PHY_TMR_DMA_CHAN_MASK), VSPA_DEFAULT_TIMEOUT);
+}
+
+void timers_trig_schedule(const uint16_t *timer_ids, const uint16_t *triggers, const uint32_t *phytimes, uint16_t count) {
+    if (!dmac_is_available(PHY_TMR_DMA_CHAN_MASK))
+        return;
+    dmac_clear_complete(PHY_TMR_DMA_CHAN_MASK);
+
+    uint16_t regCount = 0;
+    for (uint16_t i = 0; i < count; ++i) {
+        scratch_buf_addrs[regCount] = PHY_TMR_SC_ADDR(timer_ids[i]);
+        scratch_buf_values[regCount] = PHY_TIMER_COMPARATOR_DISABLE | PHY_TIMER_COMPARATOR_CLEAR_INT | triggers[i];
+        ++regCount;
+    }
+    for (uint16_t i = 0; i < count; ++i) {
+        scratch_buf_addrs[regCount] = PHY_TMR_V_ADDR(timer_ids[i]);
+        scratch_buf_values[regCount] = phytimes[i];
+        ++regCount;
+    }
+    dmac_enable(DMAC_DI32 | PHY_TMR_DMA_CHAN, regCount, VSPA_HALF_WORDS(scratch_buf_addrs), VSPA_HALF_WORDS(scratch_buf_values));
     WAIT_TIMEOUT_R(dmac_is_complete(PHY_TMR_DMA_CHAN_MASK), VSPA_DEFAULT_TIMEOUT);
 }

@@ -57,6 +57,7 @@ extern void l1_trace_clear(void);
 void l1_trace_upload(void);
 
 static inline void l1_trace(uint32_t msg, uint32_t param) {
+    return;
     next_event->cnt = ccnt_read(); // ccnt_read itself is 5 cycles
     next_event->msg = msg;
     next_event->param = param;
@@ -64,6 +65,7 @@ static inline void l1_trace(uint32_t msg, uint32_t param) {
 }
 
 static inline void l1_trace_duration(uint64_t startcnt, uint32_t msg) {
+    return;
     next_event->cnt = startcnt;
     next_event->msg = msg;
     next_event->param = ccnt_read() - startcnt;

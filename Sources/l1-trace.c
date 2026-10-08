@@ -61,8 +61,10 @@ void push_traces(void) {
     // only 1 transfer is queued up, wait for complete stop of the dma
     if (dmac_is_enabled((1 << L1_TRACE_DMA_CHANNEL))) {
         ++trace_hif.event_drops;
+        next_event = events_buffer[events_active_buffer];
         return;
     }
+    return;
 
     trace_last_batch_size = xfer_size;
     dmac_enable(DMAC_WR | L1_TRACE_DMA_CHANNEL, xfer_size,
